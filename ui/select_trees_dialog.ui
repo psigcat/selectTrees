@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>searchPlusDockWidget</class>
- <widget class="QDockWidget" name="searchPlusDockWidget">
+ <class>selectTreesDockWidget</class>
+ <widget class="QDockWidget" name="selectTreesDockWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>510</width>
-    <height>312</height>
+    <width>313</width>
+    <height>310</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -15,6 +15,12 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>280</width>
+    <height>306</height>
+   </size>
   </property>
   <property name="locale">
    <locale language="Catalan" country="Spain"/>
@@ -35,6 +41,9 @@
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
      <layout class="QFormLayout" name="formLayout">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetMinAndMaxSize</enum>
+      </property>
       <property name="fieldGrowthPolicy">
        <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
       </property>
@@ -43,6 +52,15 @@
       </property>
       <property name="verticalSpacing">
        <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>5</number>
+      </property>
+      <property name="bottomMargin">
+       <number>10</number>
       </property>
       <item row="0" column="0" colspan="2">
        <widget class="QLabel" name="lblHeader">
@@ -62,7 +80,7 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+      <item row="4" column="0">
        <widget class="QLabel" name="lblField2">
         <property name="font">
          <font>
@@ -75,8 +93,8 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
-       <widget class="QComboBox" name="cboField2">
+      <item row="4" column="1">
+       <widget class="SearchableComboBox" name="cboField2">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -85,7 +103,7 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
+      <item row="5" column="0">
        <widget class="QLabel" name="lblField3">
         <property name="font">
          <font>
@@ -98,8 +116,8 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
-       <widget class="QComboBox" name="cboField3">
+      <item row="5" column="1">
+       <widget class="SearchableComboBox" name="cboField3">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -108,7 +126,7 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
+      <item row="6" column="0">
        <widget class="QLabel" name="lblField4">
         <property name="font">
          <font>
@@ -121,8 +139,8 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
-       <widget class="QComboBox" name="cboField4">
+      <item row="6" column="1">
+       <widget class="SearchableComboBox" name="cboField4">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -131,7 +149,7 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="0">
+      <item row="7" column="0">
        <widget class="QLabel" name="lblField5">
         <property name="font">
          <font>
@@ -144,8 +162,8 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
-       <widget class="QComboBox" name="cboField5">
+      <item row="7" column="1">
+       <widget class="SearchableComboBox" name="cboField5">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -154,21 +172,8 @@
         </property>
        </widget>
       </item>
-      <item row="6" column="0">
-       <widget class="QLabel" name="lblField6">
-        <property name="font">
-         <font>
-          <family>Verdana</family>
-          <pointsize>10</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Field6</string>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="1">
-       <widget class="QComboBox" name="cboField6">
+      <item row="3" column="1">
+       <widget class="SearchableComboBox" name="cboField1">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -177,17 +182,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QComboBox" name="cboField1">
-        <property name="font">
-         <font>
-          <family>Verdana</family>
-          <pointsize>10</pointsize>
-         </font>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="lblField1">
         <property name="font">
          <font>
@@ -200,9 +195,32 @@
         </property>
        </widget>
       </item>
+      <item row="2" column="1">
+       <widget class="SearchableComboBox" name="cboField0">
+        <property name="font">
+         <font>
+          <family>Verdana</family>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="lblField0">
+        <property name="font">
+         <font>
+          <family>Verdana</family>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Field0</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
-    <item alignment="Qt::AlignRight|Qt::AlignTop">
+    <item alignment="Qt::AlignRight">
      <widget class="QPushButton" name="btnReset">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -235,11 +253,11 @@
       </property>
      </widget>
     </item>
-    <item alignment="Qt::AlignLeft|Qt::AlignTop">
+    <item>
      <widget class="QLabel" name="lblCountSelect">
       <property name="minimumSize">
        <size>
-        <width>486</width>
+        <width>200</width>
         <height>0</height>
        </size>
       </property>
@@ -251,6 +269,13 @@
    </layout>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SearchableComboBox</class>
+   <extends>QComboBox</extends>
+   <header location="global">custom_widgets.searchable_combobox</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

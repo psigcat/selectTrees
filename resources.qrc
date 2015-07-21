@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/SelectTrees" >
+        <file>icon_selecttrees.png</file>
+    </qresource>
+</RCC>
