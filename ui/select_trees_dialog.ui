@@ -45,7 +45,7 @@
        <number>8</number>
       </property>
       <item row="0" column="0" colspan="2">
-       <widget class="QLabel" name="lblheader">
+       <widget class="QLabel" name="lblHeader">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -63,7 +63,7 @@
        </widget>
       </item>
       <item row="2" column="0">
-       <widget class="QLabel" name="lblfield2">
+       <widget class="QLabel" name="lblField2">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -76,7 +76,7 @@
        </widget>
       </item>
       <item row="2" column="1">
-       <widget class="QComboBox" name="cbofield2">
+       <widget class="QComboBox" name="cboField2">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -86,7 +86,7 @@
        </widget>
       </item>
       <item row="3" column="0">
-       <widget class="QLabel" name="lblfield3">
+       <widget class="QLabel" name="lblField3">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -99,7 +99,7 @@
        </widget>
       </item>
       <item row="3" column="1">
-       <widget class="QComboBox" name="cbofield3">
+       <widget class="QComboBox" name="cboField3">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -109,7 +109,7 @@
        </widget>
       </item>
       <item row="4" column="0">
-       <widget class="QLabel" name="lblfield4">
+       <widget class="QLabel" name="lblField4">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -122,7 +122,7 @@
        </widget>
       </item>
       <item row="4" column="1">
-       <widget class="QComboBox" name="cbofield4">
+       <widget class="QComboBox" name="cboField4">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -132,7 +132,7 @@
        </widget>
       </item>
       <item row="5" column="0">
-       <widget class="QLabel" name="lblfield5">
+       <widget class="QLabel" name="lblField5">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -145,7 +145,7 @@
        </widget>
       </item>
       <item row="5" column="1">
-       <widget class="QComboBox" name="cbofield5">
+       <widget class="QComboBox" name="cboField5">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -155,7 +155,7 @@
        </widget>
       </item>
       <item row="6" column="0">
-       <widget class="QLabel" name="lblfield6">
+       <widget class="QLabel" name="lblField6">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -168,7 +168,7 @@
        </widget>
       </item>
       <item row="6" column="1">
-       <widget class="QComboBox" name="cbofield6">
+       <widget class="QComboBox" name="cboField6">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -178,7 +178,7 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QComboBox" name="cbofield1">
+       <widget class="QComboBox" name="cboField1">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -188,7 +188,7 @@
        </widget>
       </item>
       <item row="1" column="0">
-       <widget class="QLabel" name="lblfield1">
+       <widget class="QLabel" name="lblField1">
         <property name="font">
          <font>
           <family>Verdana</family>
@@ -203,7 +203,7 @@
      </layout>
     </item>
     <item alignment="Qt::AlignRight|Qt::AlignTop">
-     <widget class="QPushButton" name="pushButton">
+     <widget class="QPushButton" name="btnReset">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
         <horstretch>0</horstretch>
@@ -236,7 +236,7 @@
      </widget>
     </item>
     <item alignment="Qt::AlignLeft|Qt::AlignTop">
-     <widget class="QLabel" name="lblcountselect">
+     <widget class="QLabel" name="lblCountSelect">
       <property name="minimumSize">
        <size>
         <width>486</width>
