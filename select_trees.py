@@ -23,7 +23,7 @@ from qgis.utils import active_plugins
 from qgis.gui import (QgsMessageBar, QgsTextAnnotationItem)
 from qgis.core import (QgsCredentials, QgsDataSourceURI, QgsGeometry, QgsPoint, QgsLogger, QgsExpression, QgsFeatureRequest)
 from PyQt4.QtCore import (QObject, QSettings, QTranslator, qVersion, QCoreApplication, Qt, pyqtSignal, QPyNullVariant)
-from PyQt4.QtGui import (QAction, QIcon, QDockWidget, QTextDocument, QIntValidator, QLabel, QComboBox)
+from PyQt4.QtGui import (QAction, QIcon, QDockWidget, QTextDocument, QIntValidator, QLabel, QComboBox, QPushButton)
 
 # PostGIS import
 import psycopg2
@@ -86,7 +86,7 @@ class SelectTrees(QObject):
         self.annotations = []
         self.toolbar = self.iface.addToolBar(u'SelectTrees')
         self.toolbar.setObjectName(u'SelectTrees')
-        self.layer = None        
+        self.layer = None  
         
         # establish connection when all is completely running 
         #self.iface.initializationCompleted.connect(self.populateGui)
@@ -162,7 +162,7 @@ class SelectTrees(QObject):
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        print "initGui"
+        #print "initGui"
         icon_path = ':/plugins/SelectTrees/icon_selecttrees.png'
         self.add_action(icon_path, self.tr(u'Selecció arbres'), self.run, self.iface.mainWindow())
 
@@ -179,7 +179,11 @@ class SelectTrees(QObject):
         # Populate our GUI
         self.populateGui()
         
-        # Set signals for each combo
+        # Set signals
+        self.dlg.findChild(QPushButton, "btnReset").clicked.connect(self.reset)
+        btnZoom = self.dlg.findChild(QPushButton, "btnZoom")
+        if btnZoom:
+            btnZoom.clicked.connect(self.zoom)        
         for i in range(0, self.TOTAL):       
             combo = self.dlg.findChild(QComboBox, "cboField"+str(i))     
             combo.currentIndexChanged.connect(self.performSelect)
@@ -208,6 +212,7 @@ class SelectTrees(QObject):
         for cur_layer in layers:
             if cur_layer.name() == self.layer_name:
                 self.layer = cur_layer
+                self.feature_count = self.layer.featureCount()           
                 return self.iface.setActiveLayer(self.layer)
         
         return False
@@ -215,16 +220,17 @@ class SelectTrees(QObject):
 
     def populateGui(self):
         ''' Populate the interface with values get from active layer
-        '''       
-        
-        print "populateGui"          
+        '''   
 
-        # Load labels
+        # Get counter label
+        self.lblCountSelect = self.dlg.findChild(QLabel, "lblCountSelect")  
+                
+        # Load field labels
         for i in range(0, self.TOTAL):             
             label = self.dlg.findChild(QLabel, "lblField"+str(i))       
             label.setText(self.field_alias[i])
                     
-        # Load combos
+        # Load field combos
         for i in range(0, self.TOTAL):       
             values = set()
             field_name = self.field_name[i]
@@ -236,13 +242,22 @@ class SelectTrees(QObject):
             combo.clear()
             combo.addItem('')            
             for elem in sorted(values):    
-                if type(elem) is int:
+                if type(elem) is int or type(elem) is long:
                     elem = str(elem)
                 combo.addItem(elem)
             combo.blockSignals(False)      
 
+        # Update counter
+        self.updateCounter()
+        
         # TODO: Test
         self.run()
+        
+
+    def updateCounter(self):
+        
+        msg = "Seleccionats "+str(self.layer.selectedFeatureCount())+" de "+str(self.feature_count)+" arbres"    
+        self.lblCountSelect.setText(msg)        
           
     
     def run(self):
@@ -267,43 +282,54 @@ class SelectTrees(QObject):
     # Signals
     def performSelect(self):
 
-        # Get signal emitter
-        emitter = self.sender()
-        emitter_name = emitter.objectName()
-        combo = self.dlg.findChild(QComboBox, emitter_name)  
-        num = int(emitter_name[-1:])
-
-        # Get current text from emitter combo
-        value = combo.currentText()
+        # Get values from every combo
+        expr_list = []
+        for i in range(0, self.TOTAL):   
+            combo = self.dlg.findChild(QComboBox, "cboField"+str(i))  
+            value = combo.currentText()
+            if value != '':
+                field_name = self.field_name[i]
+                value = value.replace("'", "\\'")
+                aux = field_name+" = '"+value+"'"       
+                expr_list.append(aux)
     
-        # Get id's from selected features
-        selIds = self.layer.selectedFeaturesIds()
-        
-        
         # Build new expression
-        field_name = self.field_name[num]
-        aux = field_name+" = '"+value+"'"
-        print aux
-        
+        aux = ''
+        for i in range(len(expr_list)):
+            if aux != '':
+                aux+= ' and '
+            aux+= expr_list[i]
         expr = QgsExpression(aux)
         if expr.hasParserError():
-            print exp.parserErrorString()
-            return
+            print expr.parserErrorString() + ": " + aux
+            return      
         
-        # Get feature id's that match this expression
+        # Get a featureIterator from an expression
+        # Build a list of feature Ids from the previous result       
+        # Select features with the ids obtained
         it = self.layer.getFeatures(QgsFeatureRequest(expr))
-        newIds = [i.id() for i in it]
+        ids = [i.id() for i in it]
+        self.layer.setSelectedFeatures(ids)
         
-        # TODO: Check if selection is empty
-        #if selection == empty:
-        #    select_trees_dockwidget
-        #else:
-            # Get only those that are already selected and match the expression
-            #idsToSel = list(set(selIds).intersection(newIds))
-            
-        idsToSel = list(set(selIds).intersection(newIds))            
+        # Update counter
+        self.updateCounter()
+       
         
-        # Select them:            
-        self.layer.setSelectedFeatures(idsToSel)    
+    def reset(self):
+    
+        # Reset combos, remove selection and update counter
+        for i in range(0, self.TOTAL):   
+            combo = self.dlg.findChild(QComboBox, "cboField"+str(i))  
+            combo.blockSignals(True)                
+            combo.setCurrentIndex(0)
+            combo.blockSignals(False)                
+        self.layer.removeSelection()
+        self.updateCounter()        
+
+    
+    def zoom(self):
+  
+        action = self.iface.actionZoomToSelected()
+        action.trigger()
         
             
