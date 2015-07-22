@@ -20,23 +20,9 @@
 #from __future__ import unicode_literals, division, print_function
 
 from qgis.utils import active_plugins
-from qgis.gui import (QgsMessageBar,
-                      QgsTextAnnotationItem
-                      )
-from qgis.core import (QgsCredentials,
-                       QgsDataSourceURI,
-                       QgsGeometry,
-                       QgsPoint,
-                       QgsLogger
-                       )
-from PyQt4.QtCore import (QObject,
-                          QSettings, 
-                          QTranslator, 
-                          qVersion, 
-                          QCoreApplication,
-                          Qt,
-                          pyqtSignal, QPyNullVariant
-                          )
+from qgis.gui import (QgsMessageBar, QgsTextAnnotationItem)
+from qgis.core import (QgsCredentials, QgsDataSourceURI, QgsGeometry, QgsPoint, QgsLogger, QgsExpression, QgsFeatureRequest)
+from PyQt4.QtCore import (QObject, QSettings, QTranslator, qVersion, QCoreApplication, Qt, pyqtSignal, QPyNullVariant)
 from PyQt4.QtGui import (QAction, QIcon, QDockWidget, QTextDocument, QIntValidator, QLabel, QComboBox)
 
 # PostGIS import
@@ -193,8 +179,10 @@ class SelectTrees(QObject):
         # Populate our GUI
         self.populateGui()
         
-        # Set signals
-        self.dlg.cboField0.currentIndexChanged.connect(self.testSignal)
+        # Set signals for each combo
+        for i in range(0, self.TOTAL):       
+            combo = self.dlg.findChild(QComboBox, "cboField"+str(i))     
+            combo.currentIndexChanged.connect(self.performSelect)
     
     
     def unload(self):
@@ -246,6 +234,7 @@ class SelectTrees(QObject):
             combo = self.dlg.findChild(QComboBox, "cboField"+str(i))
             combo.blockSignals(True)
             combo.clear()
+            combo.addItem('')            
             for elem in sorted(values):    
                 if type(elem) is int:
                     elem = str(elem)
@@ -275,8 +264,46 @@ class SelectTrees(QObject):
         self.dlg.show() 
         
         
-    # TODO: Signals
-    def testSignal(self):
-        pass        
+    # Signals
+    def performSelect(self):
+
+        # Get signal emitter
+        emitter = self.sender()
+        emitter_name = emitter.objectName()
+        combo = self.dlg.findChild(QComboBox, emitter_name)  
+        num = int(emitter_name[-1:])
+
+        # Get current text from emitter combo
+        value = combo.currentText()
+    
+        # Get id's from selected features
+        selIds = self.layer.selectedFeaturesIds()
+        
+        
+        # Build new expression
+        field_name = self.field_name[num]
+        aux = field_name+" = '"+value+"'"
+        print aux
+        
+        expr = QgsExpression(aux)
+        if expr.hasParserError():
+            print exp.parserErrorString()
+            return
+        
+        # Get feature id's that match this expression
+        it = self.layer.getFeatures(QgsFeatureRequest(expr))
+        newIds = [i.id() for i in it]
+        
+        # TODO: Check if selection is empty
+        #if selection == empty:
+        #    select_trees_dockwidget
+        #else:
+            # Get only those that are already selected and match the expression
+            #idsToSel = list(set(selIds).intersection(newIds))
+            
+        idsToSel = list(set(selIds).intersection(newIds))            
+        
+        # Select them:            
+        self.layer.setSelectedFeatures(idsToSel)    
         
             
