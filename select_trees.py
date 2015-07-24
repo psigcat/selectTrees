@@ -16,20 +16,13 @@
  *                                                                         *
  ***************************************************************************/
 """
-# 2To3 python compatibility
-#from __future__ import unicode_literals, division, print_function
-
 from qgis.utils import active_plugins
 from qgis.gui import (QgsMessageBar, QgsTextAnnotationItem)
-from qgis.core import (QgsCredentials, QgsDataSourceURI, QgsGeometry, QgsPoint, QgsLogger, QgsExpression, QgsFeatureRequest)
+from qgis.core import (QgsCredentials, QgsDataSourceURI, QgsGeometry, QgsPoint, QgsLogger, QgsExpression, QgsFeatureRequest, QgsMessageLog)
 from PyQt4.QtCore import (QObject, QSettings, QTranslator, qVersion, QCoreApplication, Qt, pyqtSignal, QPyNullVariant)
 from PyQt4.QtGui import (QAction, QIcon, QDockWidget, QTextDocument, QIntValidator, QLabel, QComboBox, QPushButton)
 
-# PostGIS import
-import psycopg2
-import psycopg2.extensions
-psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
-psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)# Initialize Qt resources from file resources.py
+# Initialize Qt resources from file resources.py
 import resources_rc
 
 # Import the code for the dialog
@@ -38,7 +31,7 @@ import os.path
 
 import sys  
 #reload(sys)  
-sys.setdefaultencoding('utf8')
+#sys.setdefaultencoding('utf8')
 
 
 class SelectTrees(QObject):
@@ -84,14 +77,13 @@ class SelectTrees(QObject):
         self.actions = []
         self.menu = self.tr(u'&SelectTrees')
         self.annotations = []
-        self.toolbar = self.iface.addToolBar(u'SelectTrees')
-        self.toolbar.setObjectName(u'SelectTrees')
         self.layer = None  
+        self.initialize = False
         
         # establish connection when all is completely running 
-        #self.iface.initializationCompleted.connect(self.populateGui)
-              
-   
+        self.iface.initializationCompleted.connect(self.populateGui)
+
+    
     def loadPluginSettings(self):
         ''' Load plugin settings
         '''       
@@ -134,13 +126,16 @@ class SelectTrees(QObject):
         return QCoreApplication.translate('SelectTrees', message)
 
 
-    def add_action(self, icon_path, text, callback, parent=None, enabled_flag=True, add_to_menu=True,
-        add_to_toolbar=True, status_tip=None, whats_this=None):
+    def add_action(self, icon_path, text, callback, parent, shortcut=None,
+        enabled_flag=True, add_to_menu=True, add_to_toolbar=False, status_tip=None, whats_this=None):
 
         icon = QIcon(icon_path)
         action = QAction(icon, text, parent)
         action.triggered.connect(callback)
         action.setEnabled(enabled_flag)
+        
+        if shortcut is not None:
+            self.iface.registerMainWindowAction(action, shortcut)         
 
         if status_tip is not None:
             action.setStatusTip(status_tip)
@@ -150,6 +145,8 @@ class SelectTrees(QObject):
 
         if add_to_toolbar:
             self.toolbar.addAction(action)
+        else:
+            self.iface.addToolBarIcon(action)
 
         if add_to_menu:
             self.iface.addPluginToMenu(self.menu, action)
@@ -158,26 +155,17 @@ class SelectTrees(QObject):
 
         return action
         
-
+    
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        #print "initGui"
         icon_path = ':/plugins/SelectTrees/icon_selecttrees.png'
-        self.add_action(icon_path, self.tr(u'Selecció arbres'), self.run, self.iface.mainWindow())
+        self.add_action(icon_path, self.tr(u'Selecció arbres'), self.run, self.iface.mainWindow(), "F8")       
 
         # Create the dock widget and dock it but hide it waiting the end of qgis loading
         self.dlg = SelectTreesDockWidget(self.iface.mainWindow())
         self.iface.mainWindow().addDockWidget(Qt.LeftDockWidgetArea, self.dlg)
         self.dlg.setVisible(False)
-        
-        # Check if layer exists
-        if not self.checkLayer():
-            print "Error getting layer of trees"
-            return 
-            
-        # Populate our GUI
-        self.populateGui()
         
         # Set signals
         self.dlg.findChild(QPushButton, "btnReset").clicked.connect(self.reset)
@@ -194,8 +182,6 @@ class SelectTrees(QObject):
         for action in self.actions:
             self.iface.removePluginMenu(self.tr(u'&SelectTrees'), action)
             self.iface.removeToolBarIcon(action)
-        # remove the toolbar
-        del self.toolbar
         
         if self.dlg:
             self.dlg.deleteLater()
@@ -205,9 +191,9 @@ class SelectTrees(QObject):
     def checkLayer(self):
     
         if self.layer is not None:
-            print "Layer already set"
-            return True
-            
+            return self.iface.setActiveLayer(self.layer)
+           
+        # Iterate over all layers to get the one set in config file
         layers = self.iface.mapCanvas().layers()
         for cur_layer in layers:
             if cur_layer.name() == self.layer_name:
@@ -220,8 +206,15 @@ class SelectTrees(QObject):
 
     def populateGui(self):
         ''' Populate the interface with values get from active layer
-        '''   
-
+        '''           
+        #QgsMessageLog.logMessage(u"populateGui: init", "selectTrees", QgsMessageLog.INFO)
+        
+        # Check if layer exists
+        if not self.checkLayer():
+            QgsMessageLog.logMessage(u"populateGui: Error getting layer of trees", "selectTrees", QgsMessageLog.INFO)
+            self.iface.mainWindow().removeDockWidget(self.dlg)          
+            return 
+            
         # Get counter label
         self.lblCountSelect = self.dlg.findChild(QLabel, "lblCountSelect")  
                 
@@ -250,8 +243,7 @@ class SelectTrees(QObject):
         # Update counter
         self.updateCounter()
         
-        # TODO: Test
-        self.run()
+        self.initialize = True
         
 
     def updateCounter(self):
@@ -262,20 +254,22 @@ class SelectTrees(QObject):
     
     def run(self):
         """Run method activated by the toolbar action button"""      
-
-        # Not working: Try to set plugin to left dock widget area by default
-        #self.iface.mainWindow().addDockWidget(Qt.LeftDockWidgetArea, self.dlg)
         
-        # Get layer tree
-        if not self.checkLayer():
-            print "Error getting layer"    
-            return                 
+        if not self.initialize:
+            self.populateGui()
+        else:  
+            # Get layer set in config file
+            if not self.checkLayer():
+                self.dlg.setVisible(False)
+                return                 
         
         if self.dlg and not self.dlg.isVisible():  
             # check if the plugin is active
             if not self.pluginName in active_plugins:
                 pass
-                
+               
+        # Not working: Try to set plugin to left dock widget area by default               
+        self.iface.mainWindow().addDockWidget(Qt.LeftDockWidgetArea, self.dlg)                
         self.dlg.show() 
         
         
@@ -301,7 +295,7 @@ class SelectTrees(QObject):
             aux+= expr_list[i]
         expr = QgsExpression(aux)
         if expr.hasParserError():
-            print expr.parserErrorString() + ": " + aux
+            QgsMessageLog.logMessage(expr.parserErrorString() + ": " + aux, "selectTrees", QgsMessageLog.INFO)  
             return      
         
         # Get a featureIterator from an expression
@@ -329,7 +323,8 @@ class SelectTrees(QObject):
     
     def zoom(self):
   
-        action = self.iface.actionZoomToSelected()
-        action.trigger()
+        if self.checkLayer():
+            action = self.iface.actionZoomToSelected()
+            action.trigger()
         
             
