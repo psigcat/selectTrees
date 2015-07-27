@@ -18,7 +18,7 @@
 """
 from qgis.utils import active_plugins
 from qgis.gui import (QgsMessageBar, QgsTextAnnotationItem)
-from qgis.core import (QgsCredentials, QgsDataSourceURI, QgsGeometry, QgsPoint, QgsLogger, QgsExpression, QgsFeatureRequest, QgsMessageLog)
+from qgis.core import (QgsGeometry, QgsPoint, QgsLogger, QgsExpression, QgsFeatureRequest, QgsMessageLog, QgsVectorFileWriter, QgsVectorLayer, QgsFeature, QgsMapLayerRegistry)
 from PyQt4.QtCore import (QObject, QSettings, QTranslator, qVersion, QCoreApplication, Qt, pyqtSignal, QPyNullVariant)
 from PyQt4.QtGui import (QAction, QIcon, QDockWidget, QTextDocument, QIntValidator, QLabel, QComboBox, QPushButton)
 
@@ -77,6 +77,7 @@ class SelectTrees(QObject):
         self.actions = []
         self.menu = self.tr(u'&SelectTrees')
         self.annotations = []
+        self.mem_layer = None          
         self.layer = None  
         self.initialize = False
         
@@ -92,7 +93,8 @@ class SelectTrees(QObject):
         self.SECTION = "main/"
         
         # Get layer name
-        self.layer_name = self.settings.value(self.SECTION+'LAYER_NAME', 'prova')
+        self.layer_name = self.settings.value(self.SECTION+'LAYER_NAME', 'Arbres')
+        self.mem_layer_name = self.settings.value(self.SECTION+'MEM_LAYER_NAME', 'Arbres seleccionats')
         
         # Get field alias
         self.field_alias = []
@@ -200,6 +202,8 @@ class SelectTrees(QObject):
                 self.layer = cur_layer
                 self.feature_count = self.layer.featureCount()           
                 return self.iface.setActiveLayer(self.layer)
+            if cur_layer.name() == self.mem_layer_name:
+                self.mem_layer = cur_layer
         
         return False
             
@@ -307,8 +311,70 @@ class SelectTrees(QObject):
         
         # Update counter
         self.updateCounter()
-       
         
+        # Copy selected features to memory layer
+        self.copySelected()
+     
+     
+    # Copy from Arbres to memory layer
+    def copySelected(self):
+    
+        # Create memory layer if not already set
+        if self.mem_layer is None:       
+            uri = "Point?crs=epsg:25831"        
+            self.mem_layer = QgsVectorLayer(uri, self.mem_layer_name, "memory")  
+            QgsMapLayerRegistry.instance().addMapLayer(self.mem_layer)                
+
+        # Prepare point layer for editing
+        self.mem_layer.startEditing()
+
+        # Delete previous features
+        it = self.mem_layer.getFeatures()
+        ids = [i.id() for i in it]
+        self.mem_layer.dataProvider().deleteFeatures(ids)
+        
+        # Iterate over selected features
+        for sel_feature in self.layer.selectedFeatures():
+            feature = QgsFeature()
+            feature.setGeometry(sel_feature.geometry())        
+            self.mem_layer.addFeature(feature, True)
+          
+        self.mem_layer.commitChanges()
+
+    
+    # Copy from Arbres to memory layer
+    def copySelected2(self):
+    
+    
+        # Iterate over the points
+        for i in range(num_points):
+            # Create a new feature with his geometry and attribute values
+            # Add it to the layer
+            feature = QgsFeature()
+            feature.setGeometry(QgsGeometry.fromPoint(points[i]))
+            #feature.setAttributes([i, "valor_"+str(i)])
+            point_layer.addFeature(feature, True)        
+              
+                
+        provider = self.layer.dataProvider()
+        fields = provider.fields()
+        filename = "C:\\Temp\\prova.shp"
+        writer = QgsVectorFileWriter(filename, "CP1250", fields, provider.geometryType(), provider.crs(), "ESRI Shapefile")
+        inFeat = QgsFeature()
+        outFeat = QgsFeature()
+        inGeom = QgsGeometry()
+        #provider.select(provider.attributeIndexes())
+        while provider.nextFeature(inFeat):
+            point = inFeat.geometry().asPoint()
+            inGeom = inFeat.geometry()
+            outFeat.setGeometry(inFeat.geometry())
+            outFeat.setAttributeMap(inFeat.attributeMap())
+            writer.addFeature(outFeat)
+        del writer
+        newlayer = QgsVectorLayer(filename, "output", "ogr")
+        QgsMapLayerRegistry.instance().addMapLayer(newlayer)
+    
+    
     def reset(self):
     
         # Reset combos, remove selection and update counter
