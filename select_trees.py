@@ -109,7 +109,14 @@ class SelectTrees(QObject):
             self.field_name.append(cur_value)
         
         # Get default zoom scale
-        self.defaultZoomScale = self.settings.value('status/defaultZoomScale', 2500)
+        self.minZoomScale = int(self.settings.value('status/minZoomScale', 500))
+        
+        # Get path to QML file
+        self.path_qml = self.settings.value(self.SECTION+'PATH_QML', 'styles/arbres.qml') 
+        self.path_qml = self.plugin_dir+"/"+self.path_qml
+        if not os.path.exists(self.path_qml):
+            print self.path_qml
+            QgsMessageLog.logMessage(u"QML file not found at: "+self.path_qml, "selectTrees", QgsMessageLog.WARNING)            
         
     
     # noinspection PyMethodMayBeStatic
@@ -277,6 +284,38 @@ class SelectTrees(QObject):
         self.dlg.show() 
         
         
+    def deleteFeatures(self, layer):
+    
+        it = layer.getFeatures()
+        ids = [i.id() for i in it]
+        layer.dataProvider().deleteFeatures(ids)    
+    
+    
+    # Copy from Arbres to memory layer
+    def copySelected(self):
+    
+        # Create memory layer if not already set
+        if self.mem_layer is None:       
+            uri = "Point?crs=epsg:25831"        
+            self.mem_layer = QgsVectorLayer(uri, self.mem_layer_name, "memory")  
+            self.mem_layer.loadNamedStyle(self.path_qml)            
+            QgsMapLayerRegistry.instance().addMapLayer(self.mem_layer)                
+
+        # Prepare point layer for editing
+        self.mem_layer.startEditing()
+
+        # Delete previous features
+        self.deleteFeatures(self.mem_layer)
+        
+        # Iterate over selected features
+        for sel_feature in self.layer.selectedFeatures():
+            feature = QgsFeature()
+            feature.setGeometry(sel_feature.geometry())        
+            self.mem_layer.addFeature(feature, True)
+          
+        self.mem_layer.commitChanges()
+
+        
     # Signals
     def performSelect(self):
 
@@ -314,65 +353,6 @@ class SelectTrees(QObject):
         
         # Copy selected features to memory layer
         self.copySelected()
-     
-     
-    # Copy from Arbres to memory layer
-    def copySelected(self):
-    
-        # Create memory layer if not already set
-        if self.mem_layer is None:       
-            uri = "Point?crs=epsg:25831"        
-            self.mem_layer = QgsVectorLayer(uri, self.mem_layer_name, "memory")  
-            QgsMapLayerRegistry.instance().addMapLayer(self.mem_layer)                
-
-        # Prepare point layer for editing
-        self.mem_layer.startEditing()
-
-        # Delete previous features
-        it = self.mem_layer.getFeatures()
-        ids = [i.id() for i in it]
-        self.mem_layer.dataProvider().deleteFeatures(ids)
-        
-        # Iterate over selected features
-        for sel_feature in self.layer.selectedFeatures():
-            feature = QgsFeature()
-            feature.setGeometry(sel_feature.geometry())        
-            self.mem_layer.addFeature(feature, True)
-          
-        self.mem_layer.commitChanges()
-
-    
-    # Copy from Arbres to memory layer
-    def copySelected2(self):
-    
-    
-        # Iterate over the points
-        for i in range(num_points):
-            # Create a new feature with his geometry and attribute values
-            # Add it to the layer
-            feature = QgsFeature()
-            feature.setGeometry(QgsGeometry.fromPoint(points[i]))
-            #feature.setAttributes([i, "valor_"+str(i)])
-            point_layer.addFeature(feature, True)        
-              
-                
-        provider = self.layer.dataProvider()
-        fields = provider.fields()
-        filename = "C:\\Temp\\prova.shp"
-        writer = QgsVectorFileWriter(filename, "CP1250", fields, provider.geometryType(), provider.crs(), "ESRI Shapefile")
-        inFeat = QgsFeature()
-        outFeat = QgsFeature()
-        inGeom = QgsGeometry()
-        #provider.select(provider.attributeIndexes())
-        while provider.nextFeature(inFeat):
-            point = inFeat.geometry().asPoint()
-            inGeom = inFeat.geometry()
-            outFeat.setGeometry(inFeat.geometry())
-            outFeat.setAttributeMap(inFeat.attributeMap())
-            writer.addFeature(outFeat)
-        del writer
-        newlayer = QgsVectorLayer(filename, "output", "ogr")
-        QgsMapLayerRegistry.instance().addMapLayer(newlayer)
     
     
     def reset(self):
@@ -384,6 +364,7 @@ class SelectTrees(QObject):
             combo.setCurrentIndex(0)
             combo.blockSignals(False)                
         self.layer.removeSelection()
+        self.deleteFeatures(self.mem_layer)    
         self.updateCounter()        
 
     
@@ -392,5 +373,7 @@ class SelectTrees(QObject):
         if self.checkLayer():
             action = self.iface.actionZoomToSelected()
             action.trigger()
+            if self.iface.mapCanvas().scale() < self.minZoomScale:
+                self.iface.mapCanvas().zoomScale(self.minZoomScale)
         
             
