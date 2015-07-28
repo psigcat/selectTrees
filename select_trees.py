@@ -313,7 +313,9 @@ class SelectTrees(QObject):
             feature.setGeometry(sel_feature.geometry())        
             self.mem_layer.addFeature(feature, True)
           
+        # Commit and refresh canvas
         self.mem_layer.commitChanges()
+        self.iface.mapCanvas().refresh()        
 
         
     # Signals
@@ -366,6 +368,7 @@ class SelectTrees(QObject):
         self.layer.removeSelection()
         self.deleteFeatures(self.mem_layer)    
         self.updateCounter()        
+        self.iface.mapCanvas().refresh()
 
     
     def zoom(self):
