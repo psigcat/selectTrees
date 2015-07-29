@@ -18,7 +18,7 @@
 """
 from qgis.utils import active_plugins
 from qgis.gui import (QgsMessageBar, QgsTextAnnotationItem)
-from qgis.core import (QgsGeometry, QgsPoint, QgsLogger, QgsExpression, QgsFeatureRequest, QgsMessageLog, QgsVectorFileWriter, QgsVectorLayer, QgsFeature, QgsMapLayerRegistry)
+from qgis.core import (QgsGeometry, QgsPoint, QgsLogger, QgsExpression, QgsFeatureRequest, QgsMessageLog, QgsVectorFileWriter, QgsVectorLayer, QgsFeature, QgsMapLayerRegistry, QgsField)
 from PyQt4.QtCore import (QObject, QSettings, QTranslator, qVersion, QCoreApplication, Qt, pyqtSignal, QPyNullVariant)
 from PyQt4.QtGui import (QAction, QIcon, QDockWidget, QTextDocument, QIntValidator, QLabel, QComboBox, QPushButton)
 
@@ -115,7 +115,6 @@ class SelectTrees(QObject):
         self.path_qml = self.settings.value(self.SECTION+'PATH_QML', 'styles/arbres.qml') 
         self.path_qml = self.plugin_dir+"/"+self.path_qml
         if not os.path.exists(self.path_qml):
-            print self.path_qml
             QgsMessageLog.logMessage(u"QML file not found at: "+self.path_qml, "selectTrees", QgsMessageLog.WARNING)            
         
     
@@ -183,7 +182,7 @@ class SelectTrees(QObject):
             btnZoom.clicked.connect(self.zoom)        
         for i in range(0, self.TOTAL):       
             combo = self.dlg.findChild(QComboBox, "cboField"+str(i))     
-            combo.currentIndexChanged.connect(self.performSelect)
+            combo.currentIndexChanged.connect(self.performSelect)                   
     
     
     def unload(self):
@@ -254,7 +253,7 @@ class SelectTrees(QObject):
         # Update counter
         self.updateCounter()
         
-        self.initialize = True
+        self.initialize = True   
         
 
     def updateCounter(self):
@@ -286,9 +285,10 @@ class SelectTrees(QObject):
         
     def deleteFeatures(self, layer):
     
-        it = layer.getFeatures()
-        ids = [i.id() for i in it]
-        layer.dataProvider().deleteFeatures(ids)    
+        if layer is not None:
+            it = layer.getFeatures()
+            ids = [i.id() for i in it]
+            layer.dataProvider().deleteFeatures(ids)    
     
     
     # Copy from Arbres to memory layer
@@ -297,23 +297,39 @@ class SelectTrees(QObject):
         # Create memory layer if not already set
         if self.mem_layer is None:       
             uri = "Point?crs=epsg:25831"        
-            self.mem_layer = QgsVectorLayer(uri, self.mem_layer_name, "memory")  
+            self.mem_layer = QgsVectorLayer(uri, self.mem_layer_name, "memory")          
             self.mem_layer.loadNamedStyle(self.path_qml)            
+ 
+            # Copy attributes from main layer to memory layer
+            attrib_names = self.layer.dataProvider().fields()
+            names_list = attrib_names.toList()
+            newattributeList=[]
+            for attrib in names_list:
+                aux = self.mem_layer.fieldNameIndex(attrib.name())
+                if aux == -1:
+                    newattributeList.append(QgsField(attrib.name(), attrib.type()))
+            self.mem_layer.dataProvider().addAttributes(newattributeList)
+            self.mem_layer.updateFields()
             QgsMapLayerRegistry.instance().addMapLayer(self.mem_layer)                
 
-        # Prepare point layer for editing
+        # Prepare memoory layer for editing
         self.mem_layer.startEditing()
 
         # Delete previous features
         self.deleteFeatures(self.mem_layer)
         
         # Iterate over selected features
+        cfeatures = []
         for sel_feature in self.layer.selectedFeatures():
-            feature = QgsFeature()
-            feature.setGeometry(sel_feature.geometry())        
-            self.mem_layer.addFeature(feature, True)
-          
-        # Commit and refresh canvas
+            attributes = []
+            attributes.extend(sel_feature.attributes())
+            cfeature = QgsFeature()    
+            cfeature.setGeometry(sel_feature.geometry())
+            cfeature.setAttributes(attributes)
+            cfeatures.append(cfeature)
+                     
+        # Add features, commit changes and refresh canvas
+        self.mem_layer.dataProvider().addFeatures(cfeatures)             
         self.mem_layer.commitChanges()
         self.iface.mapCanvas().refresh()        
 
